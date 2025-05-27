@@ -1,2 +1,2 @@
-requests
-confluent-kafka
+# faker
+confluent_kafka

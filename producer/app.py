@@ -1,32 +1,53 @@
 from confluent_kafka import Producer
+from faker import Faker
+import json
 import time
+import random
+import socket
 
-# Kafka configuration - use the Docker internal network name for Kafka broker
+fake = Faker()
+
+def wait_for_kafka(host, port, timeout=30):
+    start = time.time()
+    while time.time() - start < timeout:
+        try:
+            with socket.create_connection((host, port), timeout=2):
+                print(f"[WAIT] Kafka is available at {host}:{port}")
+                return True
+        except OSError:
+            print(f"[WAIT] Waiting for Kafka at {host}:{port}...")
+            time.sleep(2)
+    raise TimeoutError(f"Kafka not available at {host}:{port} after {timeout} seconds")
+
+# Wait until Kafka is up before proceeding
+wait_for_kafka("kafka", 9092)
+
 conf = {
-    'bootstrap.servers': 'kafka:9092'  # Kafka broker address inside Docker network
+    'bootstrap.servers': 'kafka:9092'
 }
 
-# Create a Kafka Producer instance
-producer = Producer(conf)
+p = Producer(conf)
 
 def delivery_report(err, msg):
-    """Callback function called once message delivery is confirmed or failed."""
     if err is not None:
-        print(f"Message delivery failed: {err}")
+        print(f" Delivery failed: {err}")
     else:
-        print(f"Message delivered to topic {msg.topic()} partition [{msg.partition()}]")
+        print(f" Message delivered to {msg.topic()} [{msg.partition()}]")
 
-# Send 5 example messages to Kafka topic 'test-topic'
-for i in range(5):
-    message = f"Hello Kafka {i}"
-    # Produce/send the message to 'test-topic' asynchronously
-    producer.produce('test-topic', message.encode('utf-8'), callback=delivery_report)
-    
-    # Serve delivery reports (calls the callback)
-    producer.poll(1)
-    
-    # Wait for 1 second before sending next message
+def generate_fake_event():
+    return {
+        "user_id": fake.uuid4(),
+        "event_type": random.choice(["click", "purchase"]),
+        "product": fake.word(),
+        "price": round(random.uniform(10.0, 500.0), 2),
+        "timestamp": fake.iso8601()
+    }
+
+for _ in range(10):
+    event = generate_fake_event()
+    message = json.dumps(event)
+    p.produce('test-topic', message.encode('utf-8'), callback=delivery_report)
+    p.poll(1)
     time.sleep(1)
 
-# Wait until all messages are sent and delivery reports received
-producer.flush()
+p.flush()

@@ -38,7 +38,7 @@ services:
     networks:
       - kafka-network
 
-  python-consumer:        # ✅ fixed: removed extra indentation
+  python-consumer:        #  fixed: removed extra indentation
     build:
       context: ./consumer
     container_name: python-consumer
