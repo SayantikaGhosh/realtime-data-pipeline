@@ -34,6 +34,17 @@ services:
     container_name: python-producer
     depends_on:
       - kafka
+    # restart: always
+    networks:
+      - kafka-network
+
+  python-consumer:        # ✅ fixed: removed extra indentation
+    build:
+      context: ./consumer
+    container_name: python-consumer
+    depends_on:
+      - kafka
+    # restart: always
     networks:
       - kafka-network
 
