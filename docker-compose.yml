@@ -48,6 +48,24 @@ services:
     networks:
       - kafka-network
 
+  spark:
+    build:
+      context: ./spark
+    container_name: spark
+    depends_on:
+      - kafka
+    volumes:
+      - ./spark:/app
+    command: [
+      "spark-submit",
+      "--packages",
+      "org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.0,io.delta:delta-core_2.12:2.1.0",
+      "/app/kafka_to_bronze.py"
+    ]
+    networks:
+      - kafka-network
+
+
 networks:
   kafka-network:
     driver: bridge
