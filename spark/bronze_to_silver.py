@@ -1,6 +1,7 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col
 from pyspark.sql.types import StructType, StringType, FloatType, TimestampType
+import time
 
 # Define the schema (same as Bronze)
 schema = StructType() \
@@ -20,19 +21,38 @@ spark = SparkSession.builder \
 
 spark.sparkContext.setLogLevel("WARN")
 
-# Read from Bronze Delta table as stream
+bronze_path = "/tmp/delta/bronze"
+max_retries = 10
+wait_seconds = 10
+
+# Retry logic to wait for bronze table to be ready
+for attempt in range(max_retries):
+    try:
+        # Try to read one row from bronze delta table to check if ready
+        spark.read.format("delta").load(bronze_path).limit(1).collect()
+        print(f"Bronze Delta table found. Proceeding with Silver processing.")
+        break
+    except Exception as e:
+        print(f"Attempt {attempt+1}/{max_retries}: Bronze Delta table not ready. Retrying in {wait_seconds} seconds...")
+        time.sleep(wait_seconds)
+else:
+    print(f"Bronze Delta table not found after {max_retries} attempts. Exiting.")
+    spark.stop()
+    exit(1)
+
+# Now safe to read bronze delta table as stream
 df_bronze = spark.readStream \
     .format("delta") \
-    .load("/tmp/delta/bronze")
+    .load(bronze_path)
 
-# Simple cleaning/transformation (more can be added later)
+# Filter and deduplicate
 df_silver = df_bronze.filter(
     col("user_id").isNotNull() &
-    col("event_type").isNotNull() &
+    col("event_type").isin("click", "purchase") &
     col("product").isNotNull() &
-    col("price").isNotNull() &
+    (col("price") > 0) &
     col("timestamp").isNotNull()
-)
+).dropDuplicates(["user_id", "event_type", "product", "price", "timestamp"])
 
 # Write to Silver Delta table
 df_silver.writeStream \

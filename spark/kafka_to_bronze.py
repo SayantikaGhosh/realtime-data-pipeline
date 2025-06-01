@@ -26,6 +26,7 @@ df_raw = spark.readStream \
     .option("kafka.bootstrap.servers", "kafka:9092") \
     .option("subscribe", "test-topic") \
     .option("startingOffsets", "earliest") \
+    .option("failOnDataLoss", "false")  \
     .load()
 
 # Parse Kafka message value (JSON)

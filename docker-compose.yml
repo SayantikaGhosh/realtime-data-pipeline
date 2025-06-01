@@ -83,6 +83,23 @@ services:
     networks:
       - kafka-network
 
+  spark-gold:
+    image: real-time-spark:latest
+    container_name: spark-gold
+    depends_on:
+      - spark-silver
+    volumes:
+      - ./spark:/app
+      - ./deltalake:/tmp/delta
+    command: [
+      "spark-submit",
+      "--packages", "io.delta:delta-core_2.12:2.1.0",
+      "/app/silver_to_gold.py"
+    ]
+    networks:
+      - kafka-network
+
+
 networks:
   kafka-network:
     driver: bridge
