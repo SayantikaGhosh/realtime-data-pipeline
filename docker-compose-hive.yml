@@ -1,0 +1,49 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:13
+    container_name: hive-postgres
+    environment:
+      POSTGRES_USER: hive
+      POSTGRES_PASSWORD: hive
+      POSTGRES_DB: metastore
+    ports:
+      - "5432:5432"
+    networks:
+      - hive-net
+
+  hive-metastore:
+    image: apache/hive:4.0.0
+    container_name: hive-metastore
+    depends_on:
+      - postgres
+    environment:
+      HIVE_METASTORE_DB_HOST: postgres
+      HIVE_METASTORE_DB_NAME: metastore
+      HIVE_METASTORE_DB_USER: hive
+      HIVE_METASTORE_DB_PASS: hive
+    ports:
+      - "9083:9083"   # Metastore thrift service
+    networks:
+      - hive-net
+
+  hive-server2:
+    image: apache/hive:4.0.0
+    container_name: hive-server2
+    depends_on:
+      - hive-metastore
+    volumes:
+      - ./deltalake:/tmp/delta   # <-- mount host folder to container
+    environment:
+      SERVICE_NAME: hiveserver2
+      HIVE_METASTORE_URI: thrift://hive-metastore:9083
+    ports:
+      - "10000:10000"  # JDBC client connections
+      - "10002:10002"  # WebUI
+    networks:
+      - hive-net
+
+networks:
+  hive-net:
+    driver: bridge

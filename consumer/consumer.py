@@ -40,8 +40,27 @@ try:
         if msg.error():
             print(f"[ERROR] {msg.error()}", flush=True)
             continue
-        data = json.loads(msg.value().decode('utf-8'))
-        print(f"[RECEIVED] {data['event_type'].upper()} by {data['user_id']} | Product: {data['product']} | ${data['price']} | {data['timestamp']}", flush=True)
+
+        # Deserialize JSON message
+        try:
+            data = json.loads(msg.value().decode('utf-8'))
+        except json.JSONDecodeError:
+            print("[ERROR] Failed to decode JSON", flush=True)
+            continue
+
+        # Print nicely formatted event including new product fields
+        print(
+            f"[RECEIVED] EventID: {data.get('event_id')} | "
+            f"User: {data.get('user_name')} ({data.get('user_id')}) | "
+            f"Type: {data.get('event_type').upper()} | "
+            f"ProductID: {data.get('product_id')} | "
+            f"Product: {data.get('product_name')} | "
+            f"Category: {data.get('category')} | "
+            f"Brand: {data.get('brand')} | "
+            f"Price: ${data.get('price')} | "
+            f"Timestamp: {data.get('timestamp')}",
+            flush=True
+        )
 
 except KeyboardInterrupt:
     print("[STOP] Consumer interrupted.", flush=True)
