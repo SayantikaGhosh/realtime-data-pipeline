@@ -1,0 +1,3 @@
+docker run --rm -v C:\Projects\real-time-pipeline\deltalake:/tmp/delta gold-to-sb
+
+postgresql://postgres.siytrytcczkwjfzwhtdu:judo123adi1994@aws-1-ap-south-1.pooler.supabase.com:5432/postgres
